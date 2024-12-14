@@ -1,37 +1,63 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useUser } from '../context/UserContext';
+import { toast } from 'react-toastify';
+import Topbar from '../components/Topbar';
+import Profile from './content/Profile';
 
-function Home({ login }) {
+function Home() {
   const navigate = useNavigate();
+  const { user } = useUser();
+  const [UserData, setUserData] = useState([]);
 
   useEffect(() => {
-    if (!login) {
+    const loginuser = sessionStorage.getItem('user');
+    if (!loginuser) {
+      navigate('/login');
+      return;
+    }
+
+    const parsedUser = JSON.parse(loginuser);
+    const userId = parsedUser?.id;
+
+    const fetchData = async () => {
+      try {
+        const response = await axios.post(
+          'http://localhost/Barq_Backend/Userdata.php',
+          { id: userId },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const responseData = response.data;
+        if (responseData && typeof responseData === 'string' && responseData.startsWith('ok')) {
+          const jsonString = responseData.slice(2);
+          const parsedData = JSON.parse(jsonString);
+          setUserData(parsedData);
+        } else {
+          console.error("Invalid API response:", response);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    if (userId) {
+      fetchData();
+    } else {
+      toast.error("Invalid user data. Please log in again.");
       navigate('/login');
     }
-  }, [login, navigate]);
-
-  if (!login) {
-    return null;
-  }
-const [data , setdata] = useState( "");
-const [data1 ,setdata1] = useState('')
-  useEffect(() => {
-    axios
-      .get('http://localhost/api.php')
-      .then((res) => {
-        setdata(res.data[0].create_at);
-        setdata1(res.data[0].username)
-        console.log('Response:', res.data[0]);
-      })
-      .catch((err) => {
-        console.error('Error fetching user data:', err);
-      });
-  }, []);
+  }, [navigate]);
 
   return (
-    <div className='w-full h-screen bg-slate-500 flex justify-center items-center'>
-      <h1 className='text-6xl text-white'>{data} , {data1}</h1>
+    <div>
+      <Topbar />
+      <Profile />
     </div>
   );
 }

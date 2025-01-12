@@ -1,108 +1,138 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import axios from 'axios';
-import { Icon } from '@iconify/react';
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import ToastNotification from '../Common/ToastNotification';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as Yup from 'yup';
+import { useState } from "react";
 
-function Signup() {
-    const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(false);
-    
-    const signupSchema = Yup.object().shape({
-        name: Yup.string().required('Name is required'),
-        lastName: Yup.string().required('Last Name is required'),
-        username: Yup.string().required('Username is required').min(4, 'Username must be at least 4 characters'),
-        email: Yup.string().email('Invalid email format').required('Email is required'),
-        password: Yup.string().required('Password is required').min(6, 'Password must be at least 6 characters'),
+function SignUp() {
+  const [formData, setFormData] = useState({
+    name: '',
+    last_name: '',
+    username: '',
+    email: '',
+    password: ''
+  });
+  const [error, setError] = useState({
+    name: '', last_name: '', email: '', username: '', password: ''
+  });
+
+  // Function to handle dynamic form input updates
+  function getData(field, e) {
+    setFormData({ ...formData, [field]: e.target.value });
+    setError({...error , [field]:""});
+  }
+
+  // Function to handle form submission
+  function handleSubmitForm(e) {
+    e.preventDefault();
+
+    setError({
+      name: '', email: '', username: '', password: ''
     });
-    const { register, handleSubmit } = useForm({resolver: yupResolver(signupSchema)});
 
-    const signupData = async (data) => {
-        setIsLoading(true);
-        try {
-            const response = await axios.post('http://localhost/Barq_Backend/adduser.php', data, {
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-            if (response.status === 200) {
-                const responseData = response.data;
-                if (typeof responseData === "string" && responseData.startsWith("ok")) {
-                    const parsedData = JSON.parse(responseData.replace(/^ok/, ''));
-                    if (parsedData.status === "success") {
-                        toast.success("You Signup successfully!");
-                        setTimeout(() => {
-                            sessionStorage.removeItem('user');
-                            navigate('/login');
-                        }, 3000)
-                    } else {
-                        toast.error("Network Error Please try again");
-                    }
-                }
-            } else {
-                toast.error(`Error during signup Please try agian`);
-            }
-        } catch (error) {
-            toast.error("Failed to connect to the server. Please try again.");
-        } finally {
-            setTimeout(() => {
-                setIsLoading(false)
-            }, 3000)
-        }
-    };
+    const emptyFields = Object.keys(formData).filter(key => formData[key].trim() === '');
+    
+    emptyFields.forEach((key) => {
+      if (key !== 'last_name') {
+        setError(prevError => ({
+          ...prevError,
+          [key]: 'This Field is Required.'
+        }));
+      }
+    });
 
-    const GotoLogin = () => {
-        navigate('/login');
-    };
+    if (emptyFields.length === 1) {
+      fetch("http://localhost/Barq/register.php", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'Application/json'
+        },
+        body: JSON.stringify(formData)
+      }).then((res) => res.json())
+        .then((res) => {
+          console.log(res);
+        });
+    }
+  }
 
-    return (
-        <div className='w-[31%] h-[560px] bg-white mx-auto my-20 shadow-xl rounded-lg flex flex-col items-center'>
-            <ToastNotification />
-            <div className='w-full h-20 bg-btn-gradient rounded-t-lg flex justify-center items-center'>
-                <h1 className='text-4xl text-white font-bold font-sans'>Sign Up</h1>
-            </div>
-            <form onSubmit={handleSubmit(signupData)} className='w-full flex flex-col items-center'>
-                <div className='flex w-[90%] pt-5 gap-14'>
-                    <div className='w-[40%] pr-0.5'>
-                        <label className='text-lg font-semibold pb-1 text-[#2e5c5b]' htmlFor="name">Name</label>
-                        <input placeholder='Name...' {...register('name')} type="text" className='w-52 h-9 text-[#2e5c5b] bg-[#e7edf1b8] rounded-md font-semibold text-base pl-1 outline-none ' />
-                    </div>
-                    <div className='w-[40%]'>
-                        <label className='text-lg font-semibold pb-1 text-[#2e5c5b]' htmlFor="lastName">Last Name</label>
-                        <input placeholder='Last name...' {...register('lastName')} type="text" className='w-52 h-9 text-[#2e5c5b] bg-[#e7edf1b8] rounded-md font-semibold text-base pl-1 outline-none' />
-                    </div>
-                </div>
-                <div className='flex w-[90%] flex-col pt-4'>
-                    <label className='text-lg font-semibold pb-1 text-[#2e5c5b]' htmlFor="username">Username</label>
-                    <input placeholder='Username...' {...register('username')} type="text" className='h-9 text-[#2e5c5b] bg-[#e7edf1b8] rounded-md font-semibold text-base pl-1 outline-none' />
-                </div>
-                <div className='flex w-[90%] flex-col pt-4'>
-                    <label className='text-lg font-semibold pb-1 text-[#2e5c5b]' htmlFor="email">Email</label>
-                    <input placeholder='Email...' {...register('email')} type="text" className='h-9 text-[#2e5c5b] bg-[#e7edf1b8] rounded-md font-semibold text-base pl-1 outline-none' />
-                </div>
-                <div className='flex w-[90%] flex-col pt-4'>
-                    <label className='text-lg font-semibold pb-1 text-[#2e5c5b]' htmlFor="password">Password</label>
-                    <input placeholder='Password...' {...register('password')} type="password" className='h-9 text-[#2e5c5b] bg-[#e7edf1b8] rounded-md font-semibold text-base pl-1 outline-none' />
-                </div>
-                <div className='flex w-[90%] flex-col pt-8'>
-                    <button type="submit" className='text-lg font-semibold bg-btn-gradient text-white p-1.5 rounded-lg'>
-                        {isLoading ? 'loding...' : 'Sign Up'}
-                    </button>
-                </div>
-                <p className='pt-4 font-medium '> Already have an account?
-                    <b onClick={GotoLogin} className='cursor-pointer hover:text-[#2d7d91]'> Login</b>
-                </p>
-                {isLoading &&
-                    <Icon icon="eos-icons:bubble-loading" width="24" height="24" style={{ color: '#2e5c5b' }} />
-                }
-            </form>
+  return (
+    <div className="w-full h-[730px] bg-[#d5d9df] flex justify-center items-center">
+      <div className="w-[34%] h-[560px] bg-white rounded-t-lg rounded-b-lg">
+        <div className="w-full h-24 rounded-t-lg my_bg flex justify-center items-center">
+          <h1 className="text-3xl font-bold text-white font-[sans-serif] ">Sign Up</h1>
         </div>
-    );
+        <div className="w-full h-96 px-7 pt-5 ">
+          <form onSubmit={handleSubmitForm} className="flex flex-col gap-4">
+            <div className="flex justify-between">
+              <div className="flex flex-col w-[45%]">
+                <label htmlFor="name" className="text-[16px] font-[sans-serif] text-[#000000d1] font-bold">
+                  Name <span className="text-xs pl-1 text-red-500 font-semibold">{error.name}</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  onChange={(e) => getData('name', e)}
+                  className="h-10 bg-[#d4d9df70] rounded-md pl-2 text-lg font-semibold"
+                />
+              </div>
+              <div className="flex flex-col w-[45%]">
+                <label htmlFor="last_name" className="text-[16px] font-[sans-serif] text-black font-bold">
+                  Last name <span className="text-xs pl-1 text-red-500 font-semibold">{error.last_name}</span>
+                </label>
+                <input
+                  type="text"
+                  onChange={(e) => getData('last_name', e)}
+                  className="h-10 bg-[#d4d9df70] rounded-md pl-2 text-lg font-semibold"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col w-full">
+              <label htmlFor="username" className="text-[16px] font-[sans-serif] text-black font-bold">
+                Username <span className="text-xs pl-1 text-red-500 font-semibold">{error.username}</span>
+              </label>
+              <input
+                type="text"
+                required
+                onChange={(e) => getData('username', e)}
+                className="h-10 bg-[#d4d9df70] rounded-md pl-2 text-lg font-semibold"
+              />
+            </div>
+            <div className="flex flex-col w-full">
+              <label htmlFor="email" className="text-[16px] font-[sans-serif] text-black font-bold">
+                Email <span className="text-xs pl-1 text-red-500 font-semibold">{error.email}</span>
+              </label>
+              <input
+                type="email"
+                required
+                onChange={(e) => getData('email', e)}
+                className="h-10 bg-[#d4d9df70] rounded-md pl-2 text-lg font-semibold"
+                />
+            </div>
+            <div className="flex flex-col w-full">
+              <label htmlFor="password" className="text-[16px] font-[sans-serif] text-black font-bold">
+                Password <span className="text-xs pl-1 text-red-500 font-semibold">{error.password}</span>
+              </label>
+              <input
+                type="password"
+                onChange={(e) => getData('password', e)}
+                minLength={6}
+                className="h-10 bg-[#d4d9df70] rounded-md pl-2 text-lg font-semibold"
+              />
+            </div>
+            <div className="flex flex-col w-full pt-4">
+              <button
+                type="submit"
+                className="text-xl font-bold font-[sans-serif] text-white my_bg w-full h-10 bg-[#d4d9df70] rounded-md"
+              >
+                Signup
+              </button>
+            </div>
+            <div className="flex w-full pt-1 justify-center">
+              <p className="text-black text-base font-semibold">
+                Already Have An Account? <span className="font-bold">Login</span>
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export default Signup;
+export default SignUp;
